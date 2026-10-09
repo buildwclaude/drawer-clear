@@ -19,4 +19,9 @@ Download **[apk/DrawerClear.apk](apk/DrawerClear.apk)** (or the `latest` release
 3. Open the app drawer. If nothing changed, tap **Restart launcher**, or try the next candidate.
 4. **Remove all** puts everything back.
 
-If none of them work, use **Save full report** or **Export launcher APK** and share the file.
+If none of them work, tap **Copy full report** and paste it in the chat.
+
+## What it can and can't do
+- It only reads and changes `com.nothing.launcher`. Android won't even let it see other apps.
+- It runs only four kinds of shell command, all checked in the app before running ([ShizukuShell.kt](app/src/main/java/app/drawerclear/ShizukuShell.kt)): list, create, enable and disable `dc_` colour overlays on the Nothing Launcher, and restart the launcher.
+- It requests no permissions: no internet, no storage, nothing else. The build fails if one ever appears.

@@ -77,7 +77,6 @@ fun DrawerClearScreen(
     val clipboard = LocalClipboardManager.current
     val ready = shizuku.state == ShizukuShell.State.READY
 
-    var pkg by rememberSaveable { mutableStateOf(LauncherInspector.detectHomePackage(ctx) ?: "com.nothing.launcher") }
     var scan by remember { mutableStateOf<Scan?>(null) }
     var themeId by remember { mutableStateOf<Int?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -112,16 +111,16 @@ fun DrawerClearScreen(
     }
 
     fun refreshOurs() = scope.launch {
-        ours = withContext(Dispatchers.IO) { runCatching { Overlay.list(pkg.trim()) }.getOrDefault(emptyList()) }
+        ours = withContext(Dispatchers.IO) { runCatching { Overlay.list() }.getOrDefault(emptyList()) }
     }
 
     fun doScan() = work("Scan") {
-        scan = withContext(Dispatchers.Default) { LauncherInspector.scan(ctx, pkg.trim(), themeId) }
+        scan = withContext(Dispatchers.Default) { LauncherInspector.scan(ctx, themeId) }
     }
 
-    fun shell(label: String, op: (String) -> String) = work(label) {
-        log = withContext(Dispatchers.IO) { op(pkg.trim()) }
-        ours = withContext(Dispatchers.IO) { Overlay.list(pkg.trim()) }
+    fun shell(label: String, op: () -> String) = work(label) {
+        log = withContext(Dispatchers.IO) { op() }
+        ours = withContext(Dispatchers.IO) { Overlay.list() }
     }
 
     fun pick(r: Resolved) {
@@ -173,13 +172,10 @@ fun DrawerClearScreen(
             }
 
             item {
-                Section("2. Launcher") {
-                    OutlinedTextField(
-                        value = pkg,
-                        onValueChange = { pkg = it.trim() },
-                        label = { Text("Package") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                Section("2. Nothing Launcher") {
+                    Text(
+                        "Drawer Clear only reads and changes $LAUNCHER. It can't touch any other app.",
+                        style = MaterialTheme.typography.bodySmall,
                     )
                     scan?.let { s ->
                         Text("Version ${s.version} · ${s.typeCounts.values.sum()} resources", style = MaterialTheme.typography.bodySmall)
@@ -203,7 +199,7 @@ fun DrawerClearScreen(
                         value = target,
                         onValueChange = { target = it.trim() },
                         label = { Text("Target resource") },
-                        placeholder = { Text("$pkg:color/…") },
+                        placeholder = { Text("$LAUNCHER:color/…") },
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                         modifier = Modifier.fillMaxWidth(),
@@ -235,17 +231,17 @@ fun DrawerClearScreen(
                             onClick = {
                                 val c = argb ?: return@Button
                                 val t = target
-                                shell("Apply") { p -> Overlay.apply(p, t, c) }
+                                shell("Apply") { Overlay.apply(t, c) }
                             },
-                            enabled = ready && !busy && argb != null && target.contains(":color/"),
+                            enabled = ready && !busy && argb != null && target.startsWith("$LAUNCHER:color/"),
                         ) { Text("Apply") }
                         OutlinedButton(
-                            onClick = { shell("Remove") { p -> Overlay.disableAll(p) } },
+                            onClick = { shell("Remove") { Overlay.disableAll() } },
                             enabled = ready && !busy,
                         ) { Text("Remove all") }
                     }
                     OutlinedButton(
-                        onClick = { shell("Restart") { p -> Overlay.restartLauncher(p) } },
+                        onClick = { shell("Restart") { Overlay.restartLauncher() } },
                         enabled = ready && !busy,
                     ) { Text("Restart launcher") }
                     if (ours.isNotEmpty()) {
@@ -269,7 +265,7 @@ fun DrawerClearScreen(
             item {
                 Section("4. Share results") {
                     Text(
-                        "If the list doesn't make the right colour obvious, send these so it can be found.",
+                        "If the list doesn't make the right colour obvious, paste one of these in the chat.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     OutlinedButton(
@@ -283,23 +279,11 @@ fun DrawerClearScreen(
                     OutlinedButton(
                         onClick = {
                             val s = scan ?: return@OutlinedButton
-                            work("Save report") {
-                                val path = withContext(Dispatchers.IO) { LauncherInspector.saveReport(ctx, s) }
-                                toast("Saved $path")
-                            }
+                            clipboard.setText(AnnotatedString(LauncherInspector.report(s)))
+                            toast("Copied full report")
                         },
-                        enabled = scan != null && !busy,
-                    ) { Text("Save full report to Downloads") }
-                    OutlinedButton(
-                        onClick = {
-                            work("Export APK") {
-                                val saved = withContext(Dispatchers.IO) { LauncherInspector.exportApk(ctx, pkg.trim()) }
-                                log = "Exported:\n" + saved.joinToString("\n")
-                                toast("Saved ${saved.size} file(s) to Download/DrawerClear")
-                            }
-                        },
-                        enabled = !busy,
-                    ) { Text("Export launcher APK to Downloads") }
+                        enabled = scan != null,
+                    ) { Text("Copy full report") }
                 }
             }
 

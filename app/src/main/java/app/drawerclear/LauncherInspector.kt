@@ -1,17 +1,11 @@
 package app.drawerclear
 
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.TypedValue
-import java.io.File
-import java.io.OutputStream
 
 data class ResEntry(val id: Int, val type: String, val name: String)
 
@@ -46,26 +40,20 @@ data class Scan(
 }
 
 object LauncherInspector {
-    private val homeIntent get() = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+    private fun homeActivity(ctx: Context): ActivityInfo? =
+        ctx.packageManager.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(LAUNCHER), 0,
+        ).firstOrNull()?.activityInfo
 
-    fun detectHomePackage(ctx: Context): String? {
-        val ri = ctx.packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY) ?: return null
-        // "android" means no default is set and the chooser would show.
-        return ri.activityInfo?.packageName?.takeIf { it != "android" }
-    }
-
-    private fun homeActivity(ctx: Context, pkg: String): ActivityInfo? =
-        ctx.packageManager.queryIntentActivities(homeIntent, 0)
-            .map { it.activityInfo }
-            .firstOrNull { it.packageName == pkg }
-
-    fun scan(ctx: Context, pkg: String, themeOverride: Int? = null): Scan {
+    /** Reads the Nothing Launcher's colour resources (read-only, nothing is changed). */
+    fun scan(ctx: Context, themeOverride: Int? = null): Scan {
+        val pkg = LAUNCHER
         val info = ctx.packageManager.getPackageInfo(pkg, 0)
         val res = ctx.createPackageContext(pkg, Context.CONTEXT_IGNORE_SECURITY).resources
         val entries = enumerate(res)
 
         val themeId = themeOverride
-            ?: homeActivity(ctx, pkg)?.themeResource?.takeIf { it != 0 }
+            ?: homeActivity(ctx)?.themeResource?.takeIf { it != 0 }
             ?: info.applicationInfo?.theme
             ?: 0
         val theme = res.newTheme().apply { if (themeId != 0) applyStyle(themeId, true) }
@@ -233,34 +221,5 @@ object LauncherInspector {
         appendLine()
         appendLine("== Themes (${s.themes.size})")
         s.themes.forEach { appendLine(it.name) }
-    }
-
-    fun saveReport(ctx: Context, s: Scan): String =
-        saveToDownloads(ctx, "drawerclear-report-${s.pkg}.txt", "text/plain") {
-            it.write(report(s).toByteArray())
-        }
-
-    /** Copies the launcher's APK file(s) to Downloads so it can be decompiled elsewhere. */
-    fun exportApk(ctx: Context, pkg: String): List<String> {
-        val ai = ctx.packageManager.getApplicationInfo(pkg, 0)
-        val paths = listOf(ai.sourceDir) + (ai.splitSourceDirs?.toList() ?: emptyList())
-        return paths.map { path ->
-            val file = File(path)
-            saveToDownloads(ctx, "$pkg-${file.name}", "application/vnd.android.package-archive") { out ->
-                file.inputStream().use { it.copyTo(out) }
-            }
-        }
-    }
-
-    private fun saveToDownloads(ctx: Context, name: String, mime: String, write: (OutputStream) -> Unit): String {
-        val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/DrawerClear")
-        }
-        val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            ?: error("Couldn't create $name in Downloads")
-        ctx.contentResolver.openOutputStream(uri)?.use(write) ?: error("Couldn't open $name")
-        return "Download/DrawerClear/$name"
     }
 }

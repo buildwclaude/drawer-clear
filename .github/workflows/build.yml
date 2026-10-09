@@ -38,6 +38,19 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: gradle assembleRelease --stacktrace
 
+      - name: Verify the APK requests no permissions (privacy gate)
+        run: |
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | tail -1)
+          PERMS=$("$AAPT" dump permissions app/build/outputs/apk/release/app-release.apk)
+          echo "$PERMS"
+          # androidx adds one app-private permission for its own broadcast receivers; anything else fails the build.
+          EXTRA=$(echo "$PERMS" | grep "uses-permission" | grep -v "app.drawerclear.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" || true)
+          if [ -n "$EXTRA" ]; then
+            echo "::error::APK requests permissions it shouldn't: $EXTRA"
+            exit 1
+          fi
+          echo "Confirmed: no internet, storage or other permissions."
+
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk DrawerClear.apk
 
