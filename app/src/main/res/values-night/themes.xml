@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.DrawerClear" parent="android:Theme.Material.NoActionBar" />
+</resources>

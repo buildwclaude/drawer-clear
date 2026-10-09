@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An app grid fading out: the drawer going transparent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M33,33h10v10h-10z M49,33h10v10h-10z M65,33h10v10h-10z" />
+    <path android:fillColor="#99FFFFFF" android:pathData="M33,49h10v10h-10z M49,49h10v10h-10z M65,49h10v10h-10z" />
+    <path android:fillColor="#40FFFFFF" android:pathData="M33,65h10v10h-10z M49,65h10v10h-10z M65,65h10v10h-10z" />
+</vector>
