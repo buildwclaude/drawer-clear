@@ -24,4 +24,4 @@ If none of them work, tap **Copy full report** and paste it in the chat.
 ## What it can and can't do
 - It only reads and changes `com.nothing.launcher`. Android won't even let it see other apps.
 - It runs only four kinds of shell command, all checked in the app before running ([ShizukuShell.kt](app/src/main/java/app/drawerclear/ShizukuShell.kt)): list, create, enable and disable `dc_` colour overlays on the Nothing Launcher, and restart the launcher.
-- It requests no permissions: no internet, no storage, nothing else. The build fails if one ever appears.
+- Its only permission is Shizuku's, for asking Shizuku for access. No internet, no storage, nothing else; the build fails if another one ever appears.

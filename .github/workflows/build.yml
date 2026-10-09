@@ -43,8 +43,11 @@ jobs:
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | tail -1)
           PERMS=$("$AAPT" dump permissions app/build/outputs/apk/release/app-release.apk)
           echo "$PERMS"
-          # androidx adds one app-private permission for its own broadcast receivers; anything else fails the build.
-          EXTRA=$(echo "$PERMS" | grep "uses-permission" | grep -v "app.drawerclear.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" || true)
+          # Allowed: androidx's app-private receiver permission, and Shizuku's
+          # permission for asking Shizuku for access. Anything else fails the build.
+          EXTRA=$(echo "$PERMS" | grep "uses-permission" \
+            | grep -v "app.drawerclear.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" \
+            | grep -v "moe.shizuku.manager.permission.API_V23" || true)
           if [ -n "$EXTRA" ]; then
             echo "::error::APK requests permissions it shouldn't: $EXTRA"
             exit 1
