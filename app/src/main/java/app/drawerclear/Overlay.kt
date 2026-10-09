@@ -21,23 +21,31 @@ object Overlay {
             if (":$PREFIX" in id) Ours(id, m.groupValues[1] == "x") else null
         }
 
-    /** [resName] must be one of the launcher's colours, e.g. `com.nothing.launcher:color/foo`. */
+    /**
+     * [resName] must be one of the launcher's colours, e.g. `com.nothing.launcher:color/foo`.
+     *
+     * A fabricated overlay without a config only replaces the default value, so a
+     * colour with a separate `-night` value would stay unchanged in dark mode.
+     * We make two overlays: one for the default value and one for night.
+     */
     fun apply(resName: String, argb: Int): String = buildString {
         require(resName.startsWith("$LAUNCHER:color/")) { "Only $LAUNCHER colours can be changed" }
-        val name = overlayName(resName)
-        // 0x1c = TypedValue.TYPE_INT_COLOR_ARGB8
-        val fabricate = "cmd overlay fabricate --target $LAUNCHER --name $name $resName 0x1c 0x%08x".format(argb)
-        appendLine("$ $fabricate")
-        appendLine(ShizukuShell.run(fabricate).summary())
+        val base = overlayName(resName)
+        for ((name, config) in listOf(base to "", "${base}_night" to " night")) {
+            // 0x1c = TypedValue.TYPE_INT_COLOR_ARGB8
+            val fabricate = "cmd overlay fabricate --target $LAUNCHER --name $name $resName 0x1c 0x%08x".format(argb) + config
+            appendLine("$ $fabricate")
+            appendLine(ShizukuShell.run(fabricate).summary())
 
-        val id = list().firstOrNull { it.id.endsWith(":$name") }?.id
-        if (id == null) {
-            appendLine("Overlay didn't appear in 'cmd overlay list', so fabricate failed.")
-            return@buildString
+            val id = list().firstOrNull { it.id.endsWith(":$name") }?.id
+            if (id == null) {
+                appendLine("Overlay $name didn't appear in 'cmd overlay list', so fabricate failed.")
+                continue
+            }
+            val enable = "cmd overlay enable $id"
+            appendLine("$ $enable")
+            appendLine(ShizukuShell.run(enable).summary())
         }
-        val enable = "cmd overlay enable $id"
-        appendLine("$ $enable")
-        appendLine(ShizukuShell.run(enable).summary())
         append("Open the app drawer. If nothing changed, tap Restart launcher.")
     }
 

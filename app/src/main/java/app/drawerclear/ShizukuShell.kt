@@ -24,7 +24,7 @@ object ShizukuShell {
     private val L = Regex.escape(LAUNCHER)
     private val ALLOWED = listOf(
         Regex("""cmd overlay list $L"""),
-        Regex("""cmd overlay fabricate --target $L --name dc_\w+ $L:color/\w+ 0x1c 0x[0-9a-f]{8}"""),
+        Regex("""cmd overlay fabricate --target $L --name dc_\w+ $L:color/\w+ 0x1c 0x[0-9a-f]{8}( night)?"""),
         Regex("""cmd overlay (enable|disable) [\w.]+:dc_\w+"""),
         Regex("""am force-stop $L"""),
     )
